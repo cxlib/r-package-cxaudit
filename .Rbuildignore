@@ -1,0 +1,8 @@
+^cxlib\.Rproj$
+^\.Rproj\.user$
+^README
+^.gitignore$
+^LICENSE$
+^.github
+^.scripts
+^data
