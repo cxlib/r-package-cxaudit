@@ -1,0 +1,13 @@
+Package: cxaudit
+Title: A collection of R utility functions and objects to implement a simple GxP compliant audit trail for apps and services
+Version: 0.0.0.9000
+Authors@R: 
+    person("Magnus", "Mengelbier", , "magnus.mengelbier@gmail.com", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0001-8673-7625"))
+Imports: base, utils, methods, uuid (>= 1.2-0), cxapp (>= 0.5.2), httr2 (>= 1.1.2), digest (>= 0.6.37), jsonlite (>= 2.0.0)
+Suggests: testthat (>= 3.0.0)
+Description: A collection of R utility functions and objects to implement a simple GxP compliant audit trail for apps and services using the openapx auditor service.
+License: Apache License (== 2.0)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
