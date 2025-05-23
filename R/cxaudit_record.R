@@ -22,7 +22,7 @@
 #' }
 #' 
 #' The `event` is one of the supported key words `create`, `read`, `update`, 
-#' `delete`, `execute`, `commit`, `lock`, `unlock`, `sign`, `connect` and 
+#' `delete`, `execute`, `fail`, `commit`, `lock`, `unlock`, `sign`, `connect` and 
 #' `disconnect`. The events `create`, `read`, `update`, and `delete` refer to
 #' the content of the object and its state. The `lock` and `unlock` events are
 #' special states that are audited separately and are synonymous  to 
@@ -96,7 +96,7 @@ cxaudit_record$methods( "initialize" = function( x ) {
   #
   # note: new record has id and datetime as NA
   
-  supported_events <- c( "create", "read", "update", "delete", "execute",
+  supported_events <- c( "create", "read", "update", "delete", "execute", "fail",
                          "commit", "lock", "unlock", 
                          "sign", "connect", "disconnect" )
   
