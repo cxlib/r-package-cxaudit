@@ -24,6 +24,21 @@
 cxaudit_commit <- function( x ) {
 
 
+  # -- auditor configuration
+  
+  cfg <- cxapp::.cxappconfig()
+
+  # - check if auditor is enabled
+  if ( ! cfg$option( "auditor", unset = FALSE ) )
+    return(invisible(TRUE))
+  
+    
+  if ( any(is.na( c( cfg$option("auditor.url", unset = NA), 
+                     cfg$option("auditor.token", unset = NA)) )) )
+    stop( "Auditor not configured")
+  
+  
+  
   if ( missing(x) || is.null(x) || ! inherits( x, "list") )
     stop( "List of records invalid or missing" )
   
@@ -86,14 +101,6 @@ cxaudit_commit <- function( x ) {
   
 
   
-  # -- auditor configuration
-  
-  cfg <- cxapp::.cxappconfig()
-  
-  if ( any(is.na( c( cfg$option("auditor.url", unset = NA), 
-                     cfg$option("auditor.token", unset = NA)) )) )
-    stop( "Auditor not configured")
-  
   
   
   # -- post records
@@ -138,6 +145,10 @@ cxaudit_commit <- function( x ) {
     
     base::rm( list = "rec_file" )
   }
+  
+  
+  # - log fail
+  cxapp::cxapp_log( paste0( "Commit of audit records failed (record cache ", base::basename(fail_cache), ")") )
    
 
   return(invisible(FALSE))
