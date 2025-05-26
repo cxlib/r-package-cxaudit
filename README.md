@@ -1,4 +1,4 @@
-# r-package-cxaudit
+# R package cxaudit
 A collection of R utility functions and objects to implement a simple GxP 
 compliant audit trail for apps and services.
 
@@ -41,7 +41,7 @@ You can also install the latest release directly using `install.packages()`.
 #    note: see DESCRIPTION for pacakge dependencies
 #    note: cxapp can be found at https://github.com/cxlib/r-package-cxapp
 
-install.packages( "https://github.com/cxlib/r-package-cxaudit/releases/download/v0.1.0/cxaudit_0.1.0.tar.gz", type = "source", INSTALL_opts = "--install-tests" )
+install.packages( "https://github.com/cxlib/r-package-cxaudit/releases/download/v0.3.0/cxaudit_0.3.0.tar.gz", type = "source", INSTALL_opts = "--install-tests" )
 ```
 
 To install prior releases, replace the version number references in the URL.
@@ -58,7 +58,7 @@ The cxaudit package and auditor service configuration options are set in the
 to quickly get started. 
 
 The cxaudit package relies on the R package cxapp for configuration options. 
-See above link for furthe details.
+See above link for further details.
 
 <br/>
 
@@ -67,6 +67,11 @@ See above link for furthe details.
 
 # -- auditor service
 
+# enable/disable auditor service
+AUDITOR = <enable | disable>
+
+
+# auditor service URL
 AUDITOR.URL = <url + port>
 
 # note: storing the clear text access token as a property value is not recommended
@@ -80,4 +85,18 @@ AUDITOR.TOKEN = <access token>
 # AUDITOR.TOKEN = [vault] <secret>
 
 ```
+
+<br/>
+
+Setting `AUDITOR` to `disable` disables `cxaudit_commit()` from submitting or
+comitting audit records to the auditor service. Also note that disabling the 
+auditor service will also disable any error checking of submitted audit records.
+
+The `AUDITOR.URL` is the auditor service URL, including the port.
+
+The `AUDITOR.TOKEN` is the associated authorization bearer token for the 
+connection to the auditor service. Note that the access token is stored in 
+clear text, so the use of an environmental variable or key/secrets vault is
+strongly recommended.
+
 
