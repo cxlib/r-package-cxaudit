@@ -22,7 +22,15 @@ The auditor service connection is configured using the app properties
 \item \code{AUDITOR.TOKEN} defines the access token for the auditor service
 \item \code{AUDITOR.FAILCACHE} directory path to save audit records on connection
 failure
+\item \code{AUDITOR.ENVIRONMENT}is the name of audited environment as it is
+represented in the audit record.
 }
 
+If \code{AUDITOR.ENVIRONMENT} is not set, the \code{nodename} property of \code{Sys.info()}
+is used.
+
 See \link[cxapp]{cxapp_config} for details.
+
+If the \code{actor} property is not specified as part of the audit record,
+the current user identified by \code{Sys.info()} is used.
 }

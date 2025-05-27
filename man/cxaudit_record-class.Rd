@@ -17,11 +17,10 @@ The class is initialized with a vector or list of named properties.
 \item \code{object} as a digest referring to the object
 \item \code{label} as a human readable label to the audited event
 \item \code{actor} meaning the user or service performing or initiating the event
-\item \code{env} in which the event occurred
 }
 
 The \code{event} is one of the supported key words \code{create}, \code{read}, \code{update},
-\code{delete}, \code{execute}, \code{commit}, \code{lock}, \code{unlock}, \code{sign}, \code{connect} and
+\code{delete}, \code{execute}, \code{fail}, \code{commit}, \code{lock}, \code{unlock}, \code{sign}, \code{connect} and
 \code{disconnect}. The events \code{create}, \code{read}, \code{update}, and \code{delete} refer to
 the content of the object and its state. The \code{lock} and \code{unlock} events are
 special states that are audited separately and are synonymous  to
