@@ -71,6 +71,10 @@ See above link for further details.
 AUDITOR = <enable | disable>
 
 
+# environment name represeted in audit records
+AUDITOR.ENVIRONMENT = host.example.com
+
+
 # auditor service URL
 AUDITOR.URL = <url + port>
 
@@ -91,6 +95,10 @@ AUDITOR.TOKEN = <access token>
 Setting `AUDITOR` to `disable` disables `cxaudit_commit()` from submitting or
 comitting audit records to the auditor service. Also note that disabling the 
 auditor service will also disable any error checking of submitted audit records.
+
+The `AUDITOR.ENVIRONMENT` property defines the environment name as it is 
+represented in the audit record. If not set, the `nodename` property of 
+`Sys.info()` is used.
 
 The `AUDITOR.URL` is the auditor service URL, including the port.
 
