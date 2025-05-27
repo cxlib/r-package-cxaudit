@@ -18,7 +18,6 @@
 #'   \item `object` as a digest referring to the object
 #'   \item `label` as a human readable label to the audited event
 #'   \item `actor` meaning the user or service performing or initiating the event
-#'   \item `env` in which the event occurred
 #' }
 #' 
 #' The `event` is one of the supported key words `create`, `read`, `update`, 
@@ -115,7 +114,7 @@ cxaudit_record$methods( "initialize" = function( x ) {
   
   
   # -- process x
-  x_required <- c( "event", "type", "reference", "actor", "env" )
+  x_required <- c( "event", "type", "reference", "actor" )
   
   if ( missing(x) || is.null(x) || any(is.na(x)) || ! inherits( x, c( "character", "list") ) ||
        is.null(base::names(x)) || ! all(x_required %in% base::tolower(base::names(x))) )
@@ -139,7 +138,7 @@ cxaudit_record$methods( "initialize" = function( x ) {
   
   
   # - lower case keywords and references
-  for ( xprop in c( "event", "type", "class", "reference", "object", "actor", "env") )
+  for ( xprop in c( "event", "type", "class", "reference", "object", "actor") )
     if ( ! is.na(.self$.attr[[xprop]]) )
       .self$.attr[[xprop]] <- base::tolower(base::trimws(.self$.attr[[xprop]]))
   
