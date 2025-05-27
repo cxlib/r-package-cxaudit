@@ -41,7 +41,7 @@ You can also install the latest release directly using `install.packages()`.
 #    note: see DESCRIPTION for pacakge dependencies
 #    note: cxapp can be found at https://github.com/cxlib/r-package-cxapp
 
-install.packages( "https://github.com/cxlib/r-package-cxaudit/releases/download/v0.3.0/cxaudit_0.3.0.tar.gz", type = "source", INSTALL_opts = "--install-tests" )
+install.packages( "https://github.com/cxlib/r-package-cxaudit/releases/download/v0.4.0/cxaudit_0.4.0.tar.gz", type = "source", INSTALL_opts = "--install-tests" )
 ```
 
 To install prior releases, replace the version number references in the URL.
