@@ -14,9 +14,19 @@
 #'  \item `AUDITOR.TOKEN` defines the access token for the auditor service
 #'  \item `AUDITOR.FAILCACHE` directory path to save audit records on connection 
 #'        failure
+#'  \item `AUDITOR.ENVIRONMENT`is the name of audited environment as it is
+#'        represented in the audit record. 
 #' }
 #' 
+#' If `AUDITOR.ENVIRONMENT` is not set, the `nodename` property of `Sys.info()`
+#' is used. 
+#' 
 #' See \link[cxapp]{cxapp_config} for details.
+#' 
+#'
+#' If the `actor` property is not specified as part of the audit record, 
+#' the current user identified by `Sys.info()` is used.
+#' 
 #' 
 #' 
 #' @export
@@ -64,12 +74,21 @@ cxaudit_commit <- function( x ) {
     rec_lst <- append( rec_lst, 
                        rec_obj$getproperties() )
 
+    
     # - assign record ID
     rec_lst[["id"]] <- uuid::UUIDgenerate()
-    
+ 
     # - assign record timestamp 
     rec_lst[["datetime"]] <- format( as.POSIXct( Sys.time(), tz = "UTC"), format = "%Y%m%dT%H%M%S" )
- 
+
+    # - assign environment name
+    rec_lst[["env"]] <- cfg$option( "auditor.environment", unset = as.character(Sys.info()["nodename"]), as.type = FALSE )
+     
+    
+    if ( ! "actor" %in% base::names(rec_lst) )
+      rec_lst[["actor"]] <- as.character(Sys.info()["user"])
+    
+    
     # - record attributes
     if ( length(rec_obj$getattributes()) > 0 ) {
       
