@@ -86,7 +86,7 @@ cxaudit_commit <- function( x ) {
      
     
     if ( ! "actor" %in% base::names(rec_lst) )
-      rec_lst[["env"]] <- as.character(Sys.info()["user"])
+      rec_lst[["actor"]] <- as.character(Sys.info()["user"])
     
     
     # - record attributes
