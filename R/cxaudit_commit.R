@@ -1,174 +1,148 @@
 #' Utility function to commit audit records 
 #' 
 #' @param x List of audit records
+#' @param store Audit trail storage
 #' 
 #' @return Invisible logical of result
 #' 
 #' @description
-#' Commits the audit records to the auditor service instance
+#' Commits a \link[cxaudit]{cxaudit_record} `x`, or a list of records, to the 
+#' specified/configured storage `store` if auditing is enabled.
 #' 
-#' The auditor service connection is configured using the app properties 
+#' Auditing is enabled with the app property `AUDIT` equal to `enable` or 
+#' `enabled`, case insensitive.
 #' 
-#' \itemize{
-#'  \item `AUDITOR.URL` defines the URL for the service
-#'  \item `AUDITOR.TOKEN` defines the access token for the auditor service
-#'  \item `AUDITOR.FAILCACHE` directory path to save audit records on connection 
-#'        failure
-#'  \item `AUDITOR.ENVIRONMENT`is the name of audited environment as it is
-#'        represented in the audit record. 
-#' }
+#' If `store` is not specified, the default storage configuration using 
+#' is used. See \link[cxaudit]{cxaudit_store} for further details.
 #' 
-#' If `AUDITOR.ENVIRONMENT` is not set, the `nodename` property of `Sys.info()`
-#' is used. 
+#' If commit of records to the audit trail store or an error occurs, the 
+#' records are cached in the audit trail fail cache, if the fail cache is 
+#' enabled. See \link[cxaudit]{cxaudit_failcache} for configuration details.
 #' 
-#' See \link[cxapp]{cxapp_config} for details.
+#' If the audit trail fail cache is enable, not empty and the fail cache 
+#' auto-commit is enabled, any records in the fail cache are pushed to the 
+#' audit trail store. Note that multiple audit trail stores using with the same 
+#' fail cache will use the `store` used for this specific commit.
 #' 
-#'
-#' If the `actor` property is not specified as part of the audit record, 
-#' the current user identified by `Sys.info()` is used.
+#' Audit fail cache auto-commit is enabled with the app property 
+#' `AUDIT.FAILCACHE.AUTOCOMMIT` equal to `enable` or `enabled`, case 
+#' insensitive.
 #' 
+#' The function returns `TRUE` if the commit is successful to `store` or the 
+#' audit fail cache. If auditing is enabled and commit to `store` or fail cache
+#' fails, an error is returned, i.e. the intent to save audit records fails. 
 #' 
+#' If auditing is not enabled, `NULL` is returned.
 #' 
 #' @export
 
-cxaudit_commit <- function( x ) {
-
-
-  # -- auditor configuration
-  
-  cfg <- cxapp::.cxappconfig()
-
-  # - check if auditor is enabled
-  if ( ! cfg$option( "auditor", unset = FALSE ) )
-    return(invisible(TRUE))
-  
-    
-  if ( any(is.na( c( cfg$option("auditor.url", unset = NA), 
-                     cfg$option("auditor.token", unset = NA)) )) )
-    stop( "Auditor not configured")
-  
-  
-  
-  if ( missing(x) || is.null(x) || ! inherits( x, "list") )
-    stop( "List of records invalid or missing" )
-  
-  
-  if ( length(x) == 0 )
-    return(invisible(TRUE))
-  
-  
-  lst_recs <- list()
-  
-  
-  for (idx in 1:length(x) ) {
-    
-    rec_obj <- x[[idx]]
-    
-    if ( ! inherits( rec_obj, "cxaudit_record") )
-      stop( "Record ", idx, " not an audit record class" )
-  
-    # - record as list
-    rec_lst <- list()
-      
-    # - record properties
-    rec_lst <- append( rec_lst, 
-                       rec_obj$getproperties() )
-
-    
-    # - assign record ID
-    rec_lst[["id"]] <- uuid::UUIDgenerate()
- 
-    # - assign record timestamp 
-    rec_lst[["datetime"]] <- format( as.POSIXct( Sys.time(), tz = "UTC"), format = "%Y%m%dT%H%M%S" )
-
-    # - assign environment name
-    rec_lst[["env"]] <- cfg$option( "auditor.environment", unset = as.character(Sys.info()["nodename"]), as.type = FALSE )
-     
-    
-    if ( ! "actor" %in% base::names(rec_lst) )
-      rec_lst[["actor"]] <- as.character(Sys.info()["user"])
-    
-    
-    # - record attributes
-    if ( length(rec_obj$getattributes()) > 0 ) {
-      
-      rec_attrs <- rec_obj$getattributes()
-      
-      for ( xattr in rec_attrs ) 
-        for ( xattr_entry in xattr ) {
-          
-          for ( urlencode_key in c( "label", "value", "qualifier" ) )
-            if ( urlencode_key %in% base::names(xattr_entry) )
-              xattr_entry[[urlencode_key]] <- utils::URLencode( xattr_entry[[urlencode_key]], reserved = TRUE )
-
-          rec_lst[["attributes"]][[ length(rec_lst[["attributes"]]) + 1 ]] <- xattr_entry
-        }
-    }
-    
-    # - url encode label and attribute values
-    rec_lst[["label"]] <- utils::URLencode( rec_lst[["label"]], reserved = TRUE )
-    
-    if ( "attributes" %in% base::names(rec_lst) && (length(rec_lst[["attributes"]]) > 0) )
-      for ( xattr in base::names(rec_lst[["attributes"]]) )
-        rec_lst[["attributes"]][[ xattr ]] <- utils::URLencode( rec_lst[["attributes"]][[ xattr ]], reserved = TRUE )
-
-    
-    # - add to list of records
-    lst_recs[[ length(lst_recs) + 1 ]] <- rec_lst    
-    
-  }  # end of for-statement for list of records
-  
+cxaudit_commit <- function( x, store = cxaudit::cxaudit_store() ) {
 
   
-  
-  
-  # -- post records
+  if ( missing(x) || is.null(x) || ! inherits( x, c( "list", "cxaudit_record" ) ) )
+    stop( "Audit records missing or invalid" )
 
-  rslt <- try( httr2::request( cfg$option("auditor.url", unset = NA) ) |>
-                 httr2::req_url_path( "/api/records") |>
-                 httr2::req_method("POST") |>
-                 httr2::req_auth_bearer_token( cfg$option("auditor.token", unset = NA) ) |>
-                 httr2::req_body_json( lst_recs ) |>
-                 httr2::req_perform(), 
-               silent = FALSE )
+
+  # -- configuration
   
-  
-  # - success
-  if ( ! inherits(rslt, "try-error") && rslt$status_code == 201 )
-    return(invisible(TRUE))
-  
-  
-  # - failed
-  
-  if ( is.na(cfg$option("auditor.failcache", unset = NA )) )
-    stop( "Committing audit records failed and no auditor fail cache is configured" )
-  
-  
-  
-  fail_cache <- gsub( "\\\\", "/", base::tempfile( pattern = paste0( "auditor-commit-failure-", 
-                                                                     format( as.POSIXct( Sys.time(), tz = "UTC"), format = "%Y%m%dt%H%M%S" ), "-"),
-                                                   tmpdir = cfg$option("auditor.failcache", unset = base::tempdir() ), 
-                                                   fileext = "" ) )
-  
-  if ( ! dir.exists(fail_cache) && ! dir.create( fail_cache, recursive = TRUE ) )
-    stop( "Could not create commit fail container directory" )
-  
- 
-  for ( xrec in lst_recs ) {
+  cfg <- cxapp:::.cxappconfig()
+
+
+  # - audit is disabled   
+  #   note: config option AUDIT is not defined or not equal to enable or enabled
+  #   note: config option AUDIT equal to disable or disabled
+  if ( is.na( cfg$option( "audit", unset = NA ) ) ||
+       ! is.logical( cfg$option( "audit", unset = FALSE ) ) ||
+       ! cfg$option( "audit", unset = FALSE ) )
+    return(invisible(NULL))
     
-    rec_file <- gsub( "\\\\", "/", base::tempfile( pattern = "audit-record-", tmpdir = fail_cache, fileext = ".json" ) )
+  # - debug mode
+  mode_silent <- ! cfg$option( "mode.debug", unset = FALSE )
+  
+
+  # - list of records
+  
+  lst <- list()
+  
+  if ( inherits( x, "list") ) 
+    lst <- append( lst, x )
+  
+  if ( inherits( x, "cxaudit_record") )
+    lst[[1]] <- x
+
+  if ( length(lst) == 0 )  
+    stop( "Could not determine list of records" )
+  
+
+  # -- assert all are valid records
+  for ( xitem in lst ) {
     
-    if ( inherits( try( base::writeLines( jsonlite::toJSON( xrec, pretty = TRUE, auto_unbox = TRUE ), 
-                                          con = rec_file ), silent = FALSE ), "try-error" ) )
-      stop( "Failed to cache audit record" )
+    if ( ! inherits( xitem, "cxaudit_record") || is.null(attr(class(xitem), "package")) || ( attr( class(xitem), "package") != "cxaudit" ) )
+      stop( "One or more specified records are of an invalid type" )
+
+    if ( any(is.na( xitem$getproperties() )) )
+      stop( "One or more incomplete records specified" )
+
+    # note: all properties should be single entries
+    for ( xprop in cxaudit:::.cxaudit_propertynames() )
+      if ( length( xitem$getproperties()[[ xprop ]] ) != 1 )
+        stop( "One or more record properties has a value ")
     
-    base::rm( list = "rec_file" )
+        
+    if ( ! "id" %in% base::names(xitem$getproperties()) || ! uuid::UUIDvalidate(xitem$getproperties()[["id"]]) )
+      stop( "One or more records has an invalid record identifier" )
+    
+    if ( ! "datetime" %in% base::names(xitem$getproperties()) || ! inherits( xitem$getproperties()[["datetime"]], c( "POSIXct", "POSIXlt", "POSIXt" ) ) )
+      stop( "One or more records has a date/time reference of an invalid type" )
+
+    if ( any( ! cxaudit::cxaudit_validreference( base::unlist(xitem$getproperties()[ c( "object.type", "object.class", "object.hash", "actor", "env" ) ], use.names = FALSE) )) )
+      stop( "One or more property reference are invalide" )
+
+    
+    # note: a path is a / delimited string of valid references
+    # note: strsplit( "/some/path", "/" ) will return an empty string triggered by the leading slash
+    # note: base::substring(x, 2) is to ignore leading slash as an empty string is not a valid references
+    if ( ! "object.path" %in% base::names(xitem$getproperties()) || 
+         ! inherits( xitem$getproperties()[["object.path"]], "character" ) ||
+         ( base::nchar(base::trimws(xitem$getproperties()[["object.path"]])) == 0 ) ||
+         ( ( base::trimws(xitem$getproperties()[["object.path"]]) != "/" ) &&
+           any( ! cxaudit::cxaudit_validreference( base::unlist( base::strsplit( base::substring(base::trimws(xitem$getproperties()[["object.path"]]), 2), "/", fixed = TRUE ), use.names = FALSE ) ) ) ) )
+      stop( "One or more object path properties are invalid" )
+
+    if ( any( ! cxaudit::cxaudit_validreference( base::unlist(xitem$getproperties()[ c( "object.type", "object.class", "object.hash", "actor", "env" ) ], use.names = FALSE) )) )
+      stop( "One or more property reference are invalide" )
+
   }
-  
-  
-  # - log fail
-  cxapp::cxapp_log( paste0( "Commit of audit records failed (record cache ", base::basename(fail_cache), ")") )
-   
 
-  return(invisible(FALSE))
+
+  # -- fail cache
+  fail_cache <- cxaudit::cxaudit_failcache()
+  
+    
+  # -- audit commits
+  commit <- try( store$commit( lst ), silent = mode_silent )
+
+  
+  # - on commit error 
+  if ( inherits( commit, "try-error" ) ) {
+
+    if ( ! fail_cache$isenabled() )
+      stop( "Audit commit failed and fail cache is not enabled" )
+
+    if ( inherits( try( fail_cache$cache( lst ), silent = mode_silent ), "try-error" ) )
+      stop( "Audit commit and fail cache failed" )
+
+    return(invisible(TRUE))
+  }  #  end of if-statement for commit failure 
+    
+    
+  # -- fail cache auto-commit
+  if ( ! fail_cache$isempty() &&
+       ! is.na( cfg$option( "audit.failcache.autocommit", unset = NA ) ) &&
+       is.logical( cfg$option( "audit.failcache.autocommit", unset = FALSE ) ) &&
+       cfg$option( "audit.failcache.autocommit", unset = FALSE ) )
+    fail_cache$push( store = store )
+  
+
+  return(invisible(TRUE))
 }
