@@ -4,33 +4,42 @@
 \alias{cxaudit_commit}
 \title{Utility function to commit audit records}
 \usage{
-cxaudit_commit(x)
+cxaudit_commit(x, store = cxaudit::cxaudit_store())
 }
 \arguments{
 \item{x}{List of audit records}
+
+\item{store}{Audit trail storage}
 }
 \value{
 Invisible logical of result
 }
 \description{
-Commits the audit records to the auditor service instance
+Commits a \link[cxaudit]{cxaudit_record} \code{x}, or a list of records, to the
+specified/configured storage \code{store} if auditing is enabled.
 
-The auditor service connection is configured using the app properties
+Auditing is enabled with the app property \code{AUDIT} equal to \code{enable} or
+\code{enabled}, case insensitive.
 
-\itemize{
-\item \code{AUDITOR.URL} defines the URL for the service
-\item \code{AUDITOR.TOKEN} defines the access token for the auditor service
-\item \code{AUDITOR.FAILCACHE} directory path to save audit records on connection
-failure
-\item \code{AUDITOR.ENVIRONMENT}is the name of audited environment as it is
-represented in the audit record.
-}
+If \code{store} is not specified, the default storage configuration using
+is used. See \link[cxaudit]{cxaudit_store} for further details.
 
-If \code{AUDITOR.ENVIRONMENT} is not set, the \code{nodename} property of \code{Sys.info()}
-is used.
+If commit of records to the audit trail store or an error occurs, the
+records are cached in the audit trail fail cache, if the fail cache is
+enabled. See \link[cxaudit]{cxaudit_failcache} for configuration details.
 
-See \link[cxapp]{cxapp_config} for details.
+If the audit trail fail cache is enable, not empty and the fail cache
+auto-commit is enabled, any records in the fail cache are pushed to the
+audit trail store. Note that multiple audit trail stores using with the same
+fail cache will use the \code{store} used for this specific commit.
 
-If the \code{actor} property is not specified as part of the audit record,
-the current user identified by \code{Sys.info()} is used.
+Audit fail cache auto-commit is enabled with the app property
+\code{AUDIT.FAILCACHE.AUTOCOMMIT} equal to \code{enable} or \code{enabled}, case
+insensitive.
+
+The function returns \code{TRUE} if the commit is successful to \code{store} or the
+audit fail cache. If auditing is enabled and commit to \code{store} or fail cache
+fails, an error is returned, i.e. the intent to save audit records fails.
+
+If auditing is not enabled, \code{NULL} is returned.
 }

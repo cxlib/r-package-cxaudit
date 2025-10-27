@@ -11,67 +11,75 @@ Represents an audit record.
 The class is initialized with a vector or list of named properties.
 \itemize{
 \item \code{event} on the object being audited
-\item \code{type} of audited object
-\item \code{class} of the audited object type
-\item \code{reference} as a common reference to the object
-\item \code{object} as a digest referring to the object
+\item \code{object.type} as the type of audited object
+\item \code{object.class} as the class of the audited object type
+\item \code{object.path} as a path reference to the audit object
+\item \code{object.hash} as a digest or hash referring to the object definition or content
 \item \code{label} as a human readable label to the audited event
 \item \code{actor} meaning the user or service performing or initiating the event
+\item \code{env} the environment where the audited event occurred
 }
 
-The \code{event} is one of the supported key words \code{create}, \code{read}, \code{update},
-\code{delete}, \code{execute}, \code{fail}, \code{commit}, \code{lock}, \code{unlock}, \code{sign}, \code{connect} and
-\code{disconnect}. The events \code{create}, \code{read}, \code{update}, and \code{delete} refer to
-the content of the object and its state. The \code{lock} and \code{unlock} events are
-special states that are audited separately and are synonymous  to
-\emph{read-only} and \emph{write enabled}, respectively.
+The special properties \code{id} and \code{datetime} can be assigned when the the audit
+record is initialized and should only be included when the audit record
+represents saved audit records.
 
-The \code{reference} is intended as a short programmatic reference to an audited
-item such that \code{reference} represents the same audited object across the
-process. A simple example can be \code{ADAE} to represent the Adverse Event data set
-and \code{T_AE} as representing a standard Adverse Event summary table.
+The \code{event} is one of the supported event types. The events \code{create}, \code{read},
+\code{update}, \code{delete} and \code{commit} refer to the content of the audited
+object. Note that the \code{commit} event may refer to an object being created or
+updated.
 
-The \code{object} is a digest reference to the object itself and is used to track
-audited events across environments. As an example, a file can use the file's
-digest, hash, checksum, etc. to effectively track the version of that file
-across environments and actions that are registered in the audit trail.
+The \code{execute} and \code{fail} events are intended to represent audited processing
+events on or with objects. The \code{fail} event is not expected to used to capture
+and record errors and warnings, unless they are included as the fail record
+attributes.
 
-The default \code{object} is the SHA-1 digest of the string
-\verb{<type>:<class>:<reference>}.
+The events \code{lock}, \code{unlock} and \code{sign} are representative of common audited
+compliance states with the first two synonymous to \emph{read-only} and
+\emph{write enabled}, respectively. The \code{sign} event by itself is not by
+default a verifiable sign event, but can include additional attributes to
+corroborate the sign event.
 
-The special properties \code{id} and \code{datetime} are assigned when the the audit
-record is stored and are only available for saved audit records.
+The events \code{connect} and \code{disconnect} are provided to capture audited connections,
+such as login's, logout's and other types and styles of connections.
+
+An audit object is referred to by a representative path \code{object.path} such that
+the last level of the path is the object name and the preceding level represents
+a parent hierarchy, akin to a parent directory or folder. The levels of the path
+are valid references (\link{cxaudit_validreference}).
+
+The object can be further identified by its \code{object.type} and \code{object.class}
+where the type is a generic reference to the type of object and class further
+classifies the type. The type and class are valid references
+(\link{cxaudit_validreference}).
+
+The \code{object.hash} is a representation of the object definition or content such
+that the same object stored under different path references or across environments
+represent the same object, i.e. enabling auditing and tracking objects across
+environments (think of all the file transfers in today's modern processes).
+
+The \code{object.hash}, if not specified, is the SHA-1 digest of the string
+\verb{<object.type>:<object.class>:<name>} and where \emph{name} is the last level of
+\code{object.path}.
 
 The \code{getproperties} method returns a list of the record reference named
 properties.
 
-The \code{getproperty} method returns the value of specified property \code{x}. If \code{x}
-is not defined as a property, \code{NULL} is returned.
-
-The \code{setproperty} method permits setting the record properties \code{object} and
-\code{label} after the audit record has been created as long as the properties
-\code{id} and \code{datetime} are not defined (key indicators of a saved audit record).
-
 One or more additional attributes can be recorded as part of the audit record.
-An attribute is a key/value pair.
+An attribute is a value identified by a keyword. The attribute value can also
+include additional context or scope, such as \emph{new} or \emph{old}, using
+a qualifier.
 
-An attribute \code{x} can be associated with the audit record. If the attribute
-\code{value} is \code{NULL}, all entries associated with the attribute \code{x} is dropped.
-The optional attribute \code{label} is a human readable version of \code{x}. A
-qualifying keyword \code{qualfier} can be associated with the attribute value,
-such as \code{new}, \code{old}, etc. Note that the attribute name \code{x} does not have to
-be unique.
+The \code{setattributes} methods can be used to associate attributes with the
+audit record. The vector \code{x} is a named character vector where the name of
+the vector element is the attribute name and the vector element value is the
+attribute value. A qualifier can be included in the entry name using the convention
+\verb{<name>:<qualifier>} where both the name and qualifier are valid references
+(\link{cxaudit_validreference}).
 
 The \code{getattributes} method returns a character vector of named elements
-representing the record attributes.
-
-The \code{getattribute} method returns the value of specified attribute \code{x}. If \code{x}
-is not defined as an attribute, \code{NULL} is returned.
-
-If the audit record represents a saved audit record, one or more \emph{linked}
-audit record references represents audit records that were saved to the
-audit trail in conjunction with the current record. The \code{links} method returns
-an un-ordered list of audit record references. A new record has no links.
+representing the record attributes. The qualifier is omitted if it is not
+defined or equal to the default \code{value}.
 }
 \section{Fields}{
 
@@ -82,18 +90,16 @@ an un-ordered list of audit record references. A new record has no links.
 \section{Methods}{
 
 \describe{
-\item{\code{getattribute(x)}}{Return a named record attribute}
-
 \item{\code{getattributes()}}{Return list of record attributes}
+
+\item{\code{getlinks()}}{Return list of link audit records}
 
 \item{\code{getproperties()}}{Return list of record properties}
 
-\item{\code{getproperty(x)}}{Return a named record property}
-
 \item{\code{initialize(x)}}{Initialize record representation}
 
-\item{\code{setattribute(x, value = NULL, label = NULL, qualifier = NULL)}}{Set record attributes}
+\item{\code{setattributes(x)}}{Set one or more record attributes}
 
-\item{\code{setproperty(x, value)}}{Set named record property}
+\item{\code{setproperties(x)}}{Set record properties}
 }}
 
