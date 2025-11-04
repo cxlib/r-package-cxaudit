@@ -59,7 +59,7 @@ create table if not exists tbl_adt_commits (
    ts_datetime     timestamp not null default current_timestamp  
 );
 
-grant select, insert on tbl_adt_record_links to auditorsvc;
+grant select, insert on tbl_adt_commits to auditorsvc;
 
 
 
