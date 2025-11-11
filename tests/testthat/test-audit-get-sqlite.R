@@ -585,8 +585,8 @@ testthat::test_that( "audit.get.auditEnableValidByRefId", {
   for ( xblock in test_rec_objs ) {
     
     # block of one has no links ... cannot link onto itself
-    if ( length(xblock) == 1 ) {
-
+    if ( inherits( xblock, "cxaudit_record") ) {
+      
       # simplify = TRUE in replicated makes a block of one equal to the record object      
       if ( xblock$getproperties()[["id"]] == expected_refid )
         break()
@@ -779,8 +779,8 @@ testthat::test_that( "audit.get.auditEnableValidByObject", {
   for ( xblock in test_rec_objs ) {
     
     # block of one has no links ... cannot link onto itself
-    if ( length(xblock) == 1 ) {
-      
+    if ( inherits( xblock, "cxaudit_record") ) {
+
       # simplify = TRUE in replicated makes a block of one equal to the record object      
       if ( xblock$getproperties()[["id"]] == expected_refid )
         break()
