@@ -323,26 +323,47 @@
   
   # -- commit to database
   
-  dbupdates <- numeric(0)
+  if ( inherits( .self$.attr[["dbcon"]], c( "Pool", "pool") ) ) {
 
-  if ( ! DBI::dbBegin( .self$.attr[["dbcon"]] ) )
-    stop( "Could not start transaction" )
-
-  
-  for ( xstmt in sql ) 
-    dbupdates <- append( dbupdates, 
-                         DBI::dbExecute( .self$.attr[["dbcon"]], xstmt ) )
-
-  
-  if ( ! DBI::dbCommit( .self$.attr[["dbcon"]] ) )  {
+    # - connection is from a pool ... pool::dbPool()
     
-    if ( ! DBI::dbRollback( .self$.attr[["dbcon"]] ) )
-      stop( "Could not commit transaction and rollback failed" )
+    pool_commit <- try( pool::poolWithTransaction( .self$.attr[["dbcon"]], function( dbcon ) {
+      
+      # note: pool::poolWithTransaction() performs commit and eventual rollback on error
+      
+      for ( xstmt in sql ) 
+        DBI::dbExecute( dbcon, xstmt )
     
-    return(invisible(FALSE))
-  }
+    }), silent = .self$.attr[["mode.try.silent"]] )
+
+        
+    if ( inherits( pool_commit, "try-error" ) )
+      stop( "Could not commit audit records to the database pool conneciton" )
+    
+
+  } else {
+    
+    # - a database connection object ( not pool::dbPool() )
+    
+    if ( ! DBI::dbBegin( .self$.attr[["dbcon"]] ) )
+      stop( "Could not start transaction" )
+    
+    
+    for ( xstmt in sql ) 
+      DBI::dbExecute( .self$.attr[["dbcon"]], xstmt ) 
+    
+    
+    if ( ! DBI::dbCommit( .self$.attr[["dbcon"]] ) )  {
+      
+      if ( ! DBI::dbRollback( .self$.attr[["dbcon"]] ) )
+        stop( "Could not commit transaction and rollback failed" )
+      
+      return(invisible(FALSE))
+    }
+
+  }  # end of if-else-statement for connection inherited from a database pool
   
-  
+
 
   return(invisible(TRUE))
 })

@@ -46,7 +46,7 @@ sql_xpath <- utils::head( sql_paths[ file.exists(sql_paths) ], n = 1 )
 
 
 
-# -- import  sql statements
+# -- import sql statements
 
 sql_file <- try( base::readLines( sql_xpath ), silent = FALSE )
 
@@ -62,23 +62,35 @@ sql_lines <- paste0( base::gsub( "\\s{2,}", " ",
 
 
 
-# -- database
+# -- database connection
 
-if ( ! base::exists( "testdbcon", envir = cxaudit_test_env ) || is.null(cxaudit_test_env$testdb) ) {
+if ( ! base::exists( "testdbcon", envir = cxaudit_test_env ) || is.null(cxaudit_test_env$testdb) ) 
+  base::assign( "testdbcon", 
+                DBI::dbConnect( RSQLite::SQLite(), 
+                                base::tempfile( pattern = "sqlite-db-", tmpdir = base::tempdir(), fileext = ".db") ),
+                envir = cxaudit_test_env )
 
-  # - initiate SQLite database file
-  db_file <- base::tempfile( pattern = "sqlite-db-", tmpdir = base::tempdir(), fileext = ".db")
 
-  # - create database connection  
-  base::assign( "testdbcon", DBI::dbConnect( RSQLite::SQLite(), db_file ), envir = cxaudit_test_env )
+# -- database connection pool
+
+if ( ! base::exists( "testdbpool", envir = cxaudit_test_env ) || is.null(cxaudit_test_env$testdb) ) 
+  base::assign( "testdbpool", 
+                pool::dbPool( RSQLite::SQLite(), 
+                              dbname = base::tempfile( pattern = "sqlite-pooldb-", tmpdir = base::tempdir(), fileext = ".db"), 
+                              minSize = 1,
+                              maxSize = 1 ), 
+                envir = cxaudit_test_env )
   
-}
+
 
 
 # - initiate database tables
-for ( xsql in sql_lines )
-  if ( inherits( try( DBI::dbExecute( base::get( "testdbcon", envir = cxaudit_test_env ), xsql ), silent = FALSE ), "try-error" ) )
-    stop( "Could not initiate SQLite database tables" )
+for ( xdbcon in c( "testdbcon", "testdbpool") )
+  for ( xsql in sql_lines )
+    if ( inherits( try( DBI::dbExecute( base::get( xdbcon, envir = cxaudit_test_env ), xsql ), silent = FALSE ), "try-error" ) )
+      stop( "Could not initiate SQLite database tables for ", xdbcon )
+
+
 
 
 
@@ -88,12 +100,22 @@ for ( xsql in sql_lines )
 withr::defer({
   
   # - close database connection
-  DBI::dbDisconnect( base::get("testdbcon", envir = cxaudit_test_env ) )
-  base::assign( "testdbcon", NULL, envir = cxaudit_test_env )
+  if ( base::exists( "testdbcon", envir = cxaudit_test_env ) || is.null(cxaudit_test_env$testdb) ) {
+    DBI::dbDisconnect( base::get("testdbcon", envir = cxaudit_test_env ) )
+    base::rm( list = "testdbcon", envir = cxaudit_test_env )
+  }
   
   
-  # - drop database
-  base::unlink( db_file, recursive = FALSE, force = TRUE )
+  # - close database connection pool
+  if ( base::exists( "testdbpool", envir = cxaudit_test_env ) || is.null(cxaudit_test_env$testdb) ) {
+    pool::poolClose(  base::get("testdbpool", envir = cxaudit_test_env ) )
+    base::rm( list = "testdbpool", envir = cxaudit_test_env )
+  }
+  
+  
+  # - drop database files
+
+  base::unlink( list.files( base::tempdir(), pattern = "\\.db$" ), recursive = FALSE, force = TRUE )
   
 
 }, testthat::teardown_env() )
